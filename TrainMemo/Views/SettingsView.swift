@@ -7,6 +7,8 @@ struct SettingsView: View {
     @Query private var settingsList: [AppSettings]
     @State private var notificationMessage: String?
 
+    private let durationRange = 1...180
+
     private var settings: AppSettings? {
         settingsList.first
     }
@@ -52,16 +54,40 @@ struct SettingsView: View {
                     }
                 }
 
+                Section("ローテーション") {
+                    if let settings {
+                        DatePicker(
+                            "開始日",
+                            selection: rotationStartDateBinding(for: settings),
+                            displayedComponents: .date
+                        )
+                    } else {
+                        Text("設定を準備中です")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("動画") {
-                    ForEach(Array(videos.sorted { $0.order < $1.order }.enumerated()), id: \.element.id) { index, video in
+                    let sortedVideos = videos.sorted { $0.order < $1.order }
+
+                    ForEach(Array(sortedVideos.enumerated()), id: \.element.id) { index, video in
                         VideoEditorRow(
                             video: video,
                             displayIndex: index + 1,
                             canMoveUp: index > 0,
                             canMoveDown: index < videos.count - 1,
+                            canDelete: videos.count > 1,
+                            durationRange: durationRange,
                             moveUp: { moveVideo(video, by: -1) },
-                            moveDown: { moveVideo(video, by: 1) }
+                            moveDown: { moveVideo(video, by: 1) },
+                            delete: { deleteVideo(video) }
                         )
+                    }
+
+                    Button {
+                        addVideo()
+                    } label: {
+                        Label("動画を追加", systemImage: "plus.circle.fill")
                     }
                 }
             }
@@ -82,10 +108,40 @@ struct SettingsView: View {
             ) ?? Date()
         } set: { newDate in
             let components = Calendar.current.dateComponents([.hour, .minute], from: newDate)
-            settings.notificationHour = components.hour ?? 20
-            settings.notificationMinute = components.minute ?? 0
+            settings.notificationHour = components.hour ?? AppSettings.defaultNotificationHour
+            settings.notificationMinute = components.minute ?? AppSettings.defaultNotificationMinute
             saveAndScheduleNotifications()
         }
+    }
+
+    private func rotationStartDateBinding(for settings: AppSettings) -> Binding<Date> {
+        Binding {
+            settings.rotationStartDate
+        } set: { newDate in
+            settings.rotationStartDate = Calendar.current.startOfDay(for: newDate)
+            saveAndScheduleNotifications()
+        }
+    }
+
+    private func addVideo() {
+        let nextOrder = (videos.map(\.order).max() ?? -1) + 1
+        let video = WorkoutVideo(
+            order: nextOrder,
+            title: "動画 \(videos.count + 1)",
+            youtubeURL: WorkoutVideo.placeholderURL,
+            durationMinutes: WorkoutVideo.defaultDurationMinutes
+        )
+
+        modelContext.insert(video)
+        saveAndScheduleNotifications()
+    }
+
+    private func deleteVideo(_ video: WorkoutVideo) {
+        guard videos.count > 1 else { return }
+
+        modelContext.delete(video)
+        normalizeVideoOrder(excluding: video.id)
+        saveAndScheduleNotifications()
     }
 
     private func moveVideo(_ video: WorkoutVideo, by offset: Int) {
@@ -102,6 +158,16 @@ struct SettingsView: View {
         video.order = otherVideo.order
         otherVideo.order = oldOrder
         saveAndScheduleNotifications()
+    }
+
+    private func normalizeVideoOrder(excluding deletedVideoID: UUID? = nil) {
+        let sortedVideos = videos
+            .filter { $0.id != deletedVideoID }
+            .sorted { $0.order < $1.order }
+
+        for (index, video) in sortedVideos.enumerated() {
+            video.order = index
+        }
     }
 
     private func saveAndScheduleNotifications() {
@@ -130,8 +196,11 @@ private struct VideoEditorRow: View {
     let displayIndex: Int
     let canMoveUp: Bool
     let canMoveDown: Bool
+    let canDelete: Bool
+    let durationRange: ClosedRange<Int>
     let moveUp: () -> Void
     let moveDown: () -> Void
+    let delete: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -150,6 +219,11 @@ private struct VideoEditorRow: View {
                     Image(systemName: "chevron.down")
                 }
                 .disabled(!canMoveDown)
+
+                Button(role: .destructive, action: delete) {
+                    Image(systemName: "trash")
+                }
+                .disabled(!canDelete)
             }
 
             TextField("タイトル", text: $video.title)
@@ -160,7 +234,7 @@ private struct VideoEditorRow: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
 
-            Stepper(value: $video.durationMinutes, in: 1...180) {
+            Stepper(value: $video.durationMinutes, in: durationRange) {
                 Text("\(video.durationMinutes)分")
             }
         }

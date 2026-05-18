@@ -3,6 +3,9 @@ import SwiftData
 
 @Model
 final class AppSettings: Identifiable {
+    static let defaultNotificationHour = 20
+    static let defaultNotificationMinute = 0
+
     @Attribute(.unique) var id: UUID
     var rotationStartDate: Date
     var notificationEnabled: Bool
@@ -13,8 +16,8 @@ final class AppSettings: Identifiable {
         id: UUID = UUID(),
         rotationStartDate: Date = Calendar.current.startOfDay(for: Date()),
         notificationEnabled: Bool = true,
-        notificationHour: Int = 20,
-        notificationMinute: Int = 0
+        notificationHour: Int = defaultNotificationHour,
+        notificationMinute: Int = defaultNotificationMinute
     ) {
         self.id = id
         self.rotationStartDate = rotationStartDate

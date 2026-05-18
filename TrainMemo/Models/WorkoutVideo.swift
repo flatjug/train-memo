@@ -3,6 +3,10 @@ import SwiftData
 
 @Model
 final class WorkoutVideo: Identifiable {
+    static let defaultCount = 5
+    static let defaultDurationMinutes = 10
+    static let placeholderURL = "https://www.youtube.com/"
+
     @Attribute(.unique) var id: UUID
     var order: Int
     var title: String
@@ -24,11 +28,13 @@ final class WorkoutVideo: Identifiable {
     }
 
     static var defaults: [WorkoutVideo] {
-        [
-            WorkoutVideo(order: 0, title: "動画 1", youtubeURL: "https://www.youtube.com/", durationMinutes: 10),
-            WorkoutVideo(order: 1, title: "動画 2", youtubeURL: "https://www.youtube.com/", durationMinutes: 10),
-            WorkoutVideo(order: 2, title: "動画 3", youtubeURL: "https://www.youtube.com/", durationMinutes: 10),
-            WorkoutVideo(order: 3, title: "動画 4", youtubeURL: "https://www.youtube.com/", durationMinutes: 10)
-        ]
+        (0..<defaultCount).map {
+            WorkoutVideo(
+                order: $0,
+                title: "動画 \($0 + 1)",
+                youtubeURL: placeholderURL,
+                durationMinutes: defaultDurationMinutes
+            )
+        }
     }
 }

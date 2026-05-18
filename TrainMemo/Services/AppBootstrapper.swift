@@ -6,8 +6,7 @@ enum AppBootstrapper {
     @discardableResult
     static func bootstrap(context: ModelContext) -> (settings: AppSettings, videos: [WorkoutVideo])? {
         do {
-            var videoDescriptor = FetchDescriptor<WorkoutVideo>(sortBy: [SortDescriptor(\.order)])
-            videoDescriptor.fetchLimit = 4
+            let videoDescriptor = FetchDescriptor<WorkoutVideo>(sortBy: [SortDescriptor(\.order)])
             var videos = try context.fetch(videoDescriptor)
 
             if videos.isEmpty {

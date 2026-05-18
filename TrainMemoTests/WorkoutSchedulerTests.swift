@@ -21,6 +21,11 @@ final class WorkoutSchedulerTests: XCTestCase {
         XCTAssertEqual(WorkoutScheduler.videoIndex(for: date(2026, 5, 5), startDate: start, videoCount: 4, calendar: calendar), 0)
     }
 
+    func testDefaultVideosUseFiveDayCycle() {
+        XCTAssertEqual(WorkoutVideo.defaults.count, 5)
+        XCTAssertEqual(WorkoutVideo.defaults.map(\.order), [0, 1, 2, 3, 4])
+    }
+
     func testSkippedDaysStillAdvanceByDate() {
         let start = date(2026, 5, 1)
 
