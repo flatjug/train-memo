@@ -1,39 +1,39 @@
 # TrainMemo
 
-TrainMemo is a simple SwiftUI app for keeping a daily workout routine with four rotating YouTube videos.
+TrainMemo は、4本の YouTube 動画を日替わりで回しながら筋トレ習慣を記録する SwiftUI アプリです。
 
-## Features
+## 機能
 
-- Shows today's workout video from a four-day rotation.
-- Opens the registered YouTube URL from the Today tab.
-- Records daily completion with SwiftData.
-- Displays current streak, total completed days, and a monthly completion calendar.
-- Lets you edit video titles, URLs, durations, and order.
-- Schedules local notifications for upcoming workout days.
+- 4日ローテーションで今日の筋トレ動画を表示
+- 「今日」タブから登録済みの YouTube URL を起動
+- SwiftData で日々の完了記録を保存
+- 連続日数、合計日数、月ごとの完了カレンダーを表示
+- 動画タイトル、URL、時間、並び順を編集
+- 今後の筋トレ日にローカル通知を予約
 
-## Requirements
+## 要件
 
-- Xcode 16 or later
-- iOS 17.0 or later
+- Xcode 16 以降
+- iOS 17.0 以降
 - Swift 6
 
-## Project Structure
+## 構成
 
 ```text
 TrainMemo/
-  App/        App entry point and SwiftData container setup
-  Models/     SwiftData models
-  Services/   Bootstrap, workout rotation, and notification scheduling logic
-  Views/      Today, history, settings, and tab views
+  App/        アプリのエントリポイントと SwiftData コンテナ設定
+  Models/     SwiftData モデル
+  Services/   初期データ投入、動画ローテーション、通知スケジューリング
+  Views/      今日、記録、設定、タブ表示
 TrainMemoTests/
   WorkoutSchedulerTests.swift
 ```
 
-## Build
+## ビルド
 
-Open `TrainMemo.xcodeproj` in Xcode and run the `TrainMemo` scheme.
+Xcode で `TrainMemo.xcodeproj` を開き、`TrainMemo` スキームを実行します。
 
-From the command line:
+コマンドラインからビルドする場合:
 
 ```sh
 xcodebuild -project TrainMemo.xcodeproj \
@@ -42,9 +42,9 @@ xcodebuild -project TrainMemo.xcodeproj \
   build
 ```
 
-## Tests
+## テスト
 
-The unit tests focus on workout rotation, streak calculation, completed-day deduplication, and calendar grid generation.
+ユニットテストでは、動画ローテーション、連続日数の計算、同日ログの重複排除、月カレンダーの生成を確認しています。
 
 ```sh
 xcodebuild -project TrainMemo.xcodeproj \
@@ -53,6 +53,6 @@ xcodebuild -project TrainMemo.xcodeproj \
   test
 ```
 
-## Notes
+## メモ
 
-The app creates four placeholder videos on first launch. Edit them from the Settings tab before using the routine.
+初回起動時に4本のプレースホルダー動画が作成されます。実際に使う前に「設定」タブから動画情報を編集してください。
