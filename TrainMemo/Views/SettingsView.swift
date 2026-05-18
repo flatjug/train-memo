@@ -6,6 +6,8 @@ struct SettingsView: View {
     @Query(sort: \WorkoutVideo.order) private var videos: [WorkoutVideo]
     @Query private var settingsList: [AppSettings]
     @State private var notificationMessage: String?
+    @State private var videoPendingDeletion: WorkoutVideo?
+    @State private var showingDeleteConfirmation = false
 
     private let durationRange = 1...180
 
@@ -23,79 +25,109 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("通知") {
-                    if let settings {
-                        Toggle(
-                            "毎日通知する",
-                            isOn: Binding(
-                                get: { settings.notificationEnabled },
-                                set: { newValue in
-                                    settings.notificationEnabled = newValue
-                                    saveAndScheduleNotifications()
-                                }
-                            )
-                        )
-
-                        DatePicker(
-                            "通知時刻",
-                            selection: notificationDateBinding(for: settings),
-                            displayedComponents: .hourAndMinute
-                        )
-                        .disabled(!settings.notificationEnabled)
-
-                        if let notificationMessage {
-                            Text(notificationMessage)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    } else {
-                        Text("設定を準備中です")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Section("ローテーション") {
-                    if let settings {
-                        DatePicker(
-                            "開始日",
-                            selection: rotationStartDateBinding(for: settings),
-                            displayedComponents: .date
-                        )
-                    } else {
-                        Text("設定を準備中です")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Section("動画") {
-                    let sortedVideos = videos.sorted { $0.order < $1.order }
-
-                    ForEach(Array(sortedVideos.enumerated()), id: \.element.id) { index, video in
-                        VideoEditorRow(
-                            video: video,
-                            displayIndex: index + 1,
-                            canMoveUp: index > 0,
-                            canMoveDown: index < videos.count - 1,
-                            canDelete: videos.count > 1,
-                            durationRange: durationRange,
-                            moveUp: { moveVideo(video, by: -1) },
-                            moveDown: { moveVideo(video, by: 1) },
-                            delete: { deleteVideo(video) }
-                        )
-                    }
-
-                    Button {
-                        addVideo()
-                    } label: {
-                        Label("動画を追加", systemImage: "plus.circle.fill")
-                    }
-                }
+                notificationSection
+                rotationSection
+                videosSection
             }
             .navigationTitle("設定")
             .onChange(of: videoSignature) {
                 saveAndScheduleNotifications()
             }
+            .confirmationDialog(
+                "動画を削除しますか？",
+                isPresented: $showingDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("削除", role: .destructive) {
+                    if let videoPendingDeletion {
+                        deleteVideo(videoPendingDeletion)
+                    }
+                }
+                Button("キャンセル", role: .cancel) {}
+            } message: {
+                if let videoPendingDeletion {
+                    Text("「\(videoPendingDeletion.title)」をローテーションから削除します。")
+                }
+            }
         }
+    }
+
+    @ViewBuilder
+    private var notificationSection: some View {
+        Section("通知") {
+            if let settings {
+                Toggle(
+                    "毎日通知する",
+                    isOn: Binding(
+                        get: { settings.notificationEnabled },
+                        set: { newValue in
+                            settings.notificationEnabled = newValue
+                            saveAndScheduleNotifications()
+                        }
+                    )
+                )
+
+                DatePicker(
+                    "通知時刻",
+                    selection: notificationDateBinding(for: settings),
+                    displayedComponents: .hourAndMinute
+                )
+                .disabled(!settings.notificationEnabled)
+
+                if let notificationMessage {
+                    Text(notificationMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("設定を準備中です")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var rotationSection: some View {
+        Section("ローテーション") {
+            if let settings {
+                DatePicker(
+                    "開始日",
+                    selection: rotationStartDateBinding(for: settings),
+                    displayedComponents: .date
+                )
+            } else {
+                Text("設定を準備中です")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var videosSection: some View {
+        Section("動画") {
+            ForEach(Array(sortedVideos.enumerated()), id: \.element.id) { index, video in
+                VideoEditorRow(
+                    video: video,
+                    displayIndex: index + 1,
+                    canMoveUp: index > 0,
+                    canMoveDown: index < videos.count - 1,
+                    canDelete: videos.count > 1,
+                    durationRange: durationRange,
+                    moveUp: { moveVideo(video, by: -1) },
+                    moveDown: { moveVideo(video, by: 1) },
+                    delete: { confirmDelete(video) }
+                )
+            }
+
+            Button {
+                addVideo()
+            } label: {
+                Label("動画を追加", systemImage: "plus.circle.fill")
+            }
+        }
+    }
+
+    private var sortedVideos: [WorkoutVideo] {
+        videos.sorted { $0.order < $1.order }
     }
 
     private func notificationDateBinding(for settings: AppSettings) -> Binding<Date> {
@@ -131,11 +163,17 @@ struct SettingsView: View {
         saveAndScheduleNotifications()
     }
 
+    private func confirmDelete(_ video: WorkoutVideo) {
+        videoPendingDeletion = video
+        showingDeleteConfirmation = true
+    }
+
     private func deleteVideo(_ video: WorkoutVideo) {
         guard videos.count > 1 else { return }
 
         modelContext.delete(video)
         normalizeVideoOrder(excluding: video.id)
+        videoPendingDeletion = nil
         saveAndScheduleNotifications()
     }
 

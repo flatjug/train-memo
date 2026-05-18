@@ -2,8 +2,12 @@ import SwiftData
 import SwiftUI
 
 struct HistoryView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \WorkoutLog.date, order: .reverse) private var logs: [WorkoutLog]
+    @Query(sort: \WorkoutVideo.order) private var videos: [WorkoutVideo]
     @State private var displayedMonth = Date()
+    @State private var selectedDate: Date?
+    @State private var errorMessage: String?
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
     private let weekdaySymbols = Calendar.current.shortStandaloneWeekdaySymbols
@@ -56,18 +60,45 @@ struct HistoryView: View {
                             }
 
                             ForEach(Array(WorkoutScheduler.monthGrid(containing: displayedMonth).enumerated()), id: \.offset) { _, date in
-                                CalendarDayCell(date: date, isCompleted: isCompleted(date), isToday: isToday(date))
+                                CalendarDayCell(
+                                    date: date,
+                                    isCompleted: isCompleted(date),
+                                    isToday: isToday(date),
+                                    select: { selectDate(date) }
+                                )
                             }
                         }
                     }
                     .padding(16)
                     .background(.background)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
                 }
                 .padding(20)
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("記録")
+            .sheet(item: selectedDayDetailBinding) { detail in
+                DayDetailView(
+                    detail: detail,
+                    deleteLogs: { deleteLogs(on: detail.date) }
+                )
+                .presentationDetents([.medium])
+            }
+        }
+    }
+
+    private var selectedDayDetailBinding: Binding<DayDetail?> {
+        Binding {
+            guard let selectedDate else { return nil }
+            return dayDetail(for: selectedDate)
+        } set: { detail in
+            selectedDate = detail?.date
         }
     }
 
@@ -87,6 +118,45 @@ struct HistoryView: View {
         }
 
         displayedMonth = nextMonth
+    }
+
+    private func selectDate(_ date: Date?) {
+        guard let date else { return }
+        selectedDate = Calendar.current.startOfDay(for: date)
+        errorMessage = nil
+    }
+
+    private func dayDetail(for date: Date) -> DayDetail {
+        let logsForDay = WorkoutScheduler.logs(on: date, logs: logs)
+        return DayDetail(
+            date: Calendar.current.startOfDay(for: date),
+            items: logsForDay.map { log in
+                DayDetail.Item(
+                    id: log.id,
+                    videoTitle: videoTitle(for: log.videoID),
+                    completedAt: log.completedAt
+                )
+            }
+        )
+    }
+
+    private func videoTitle(for videoID: UUID) -> String {
+        videos.first { $0.id == videoID }?.title ?? "削除済みの動画"
+    }
+
+    private func deleteLogs(on date: Date) {
+        let logsToDelete = WorkoutScheduler.logs(on: date, logs: logs)
+        guard !logsToDelete.isEmpty else { return }
+
+        logsToDelete.forEach { modelContext.delete($0) }
+
+        do {
+            try modelContext.save()
+            selectedDate = nil
+            errorMessage = nil
+        } catch {
+            errorMessage = "記録の取り消しに失敗しました"
+        }
     }
 }
 
@@ -114,25 +184,84 @@ private struct CalendarDayCell: View {
     let date: Date?
     let isCompleted: Bool
     let isToday: Bool
+    let select: () -> Void
 
     var body: some View {
-        ZStack {
-            if let date {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isCompleted ? Color.mint.opacity(0.9) : Color(.secondarySystemGroupedBackground))
-                    .overlay {
-                        if isToday {
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.mint, lineWidth: 2)
+        Button(action: select) {
+            ZStack {
+                if let date {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isCompleted ? Color.mint.opacity(0.9) : Color(.secondarySystemGroupedBackground))
+                        .overlay {
+                            if isToday {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.mint, lineWidth: 2)
+                            }
                         }
-                    }
 
-                Text("\(Calendar.current.component(.day, from: date))")
-                    .font(.callout.weight(isCompleted ? .bold : .regular))
-                    .foregroundStyle(isCompleted ? .white : .primary)
+                    Text("\(Calendar.current.component(.day, from: date))")
+                        .font(.callout.weight(isCompleted ? .bold : .regular))
+                        .foregroundStyle(isCompleted ? .white : .primary)
+                }
             }
         }
         .frame(height: 44)
+        .buttonStyle(.plain)
+        .disabled(date == nil)
+    }
+}
+
+private struct DayDetail: Identifiable {
+    struct Item: Identifiable {
+        let id: UUID
+        let videoTitle: String
+        let completedAt: Date
+    }
+
+    let date: Date
+    let items: [Item]
+
+    var id: Date {
+        date
+    }
+}
+
+private struct DayDetailView: View {
+    let detail: DayDetail
+    let deleteLogs: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    if detail.items.isEmpty {
+                        Text("この日の記録はありません")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(detail.items) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.videoTitle)
+                                    .font(.headline)
+                                Text(item.completedAt, format: .dateTime.hour().minute())
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+
+                if !detail.items.isEmpty {
+                    Section {
+                        Button(role: .destructive, action: deleteLogs) {
+                            Label("この日の記録を取り消す", systemImage: "trash")
+                        }
+                    }
+                }
+            }
+            .navigationTitle(detail.date.formatted(.dateTime.month().day().weekday(.wide)))
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }
 
