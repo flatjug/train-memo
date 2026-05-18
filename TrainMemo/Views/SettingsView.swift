@@ -125,12 +125,7 @@ struct SettingsView: View {
 
     private func addVideo() {
         let nextOrder = (videos.map(\.order).max() ?? -1) + 1
-        let video = WorkoutVideo(
-            order: nextOrder,
-            title: "動画 \(videos.count + 1)",
-            youtubeURL: WorkoutVideo.placeholderURL,
-            durationMinutes: WorkoutVideo.defaultDurationMinutes
-        )
+        let video = WorkoutVideo.defaultVideo(order: nextOrder)
 
         modelContext.insert(video)
         saveAndScheduleNotifications()

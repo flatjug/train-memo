@@ -22,6 +22,10 @@ struct TodayView: View {
         WorkoutScheduler.isCompleted(on: Date(), logs: logs)
     }
 
+    private var todayLogs: [WorkoutLog] {
+        WorkoutScheduler.logs(on: Date(), logs: logs)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -61,17 +65,20 @@ struct TodayView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.large)
-                            .disabled(URL(string: video.youtubeURL) == nil)
+                            .disabled(WorkoutVideo.youtubeURL(from: video.youtubeURL) == nil)
 
                             Button {
-                                complete(video)
+                                if completedToday {
+                                    undoCompletion()
+                                } else {
+                                    complete(video)
+                                }
                             } label: {
-                                Label(completedToday ? "今日は完了済み" : "完了にする", systemImage: completedToday ? "checkmark.circle.fill" : "checkmark.circle")
+                                Label(completedToday ? "完了を取り消す" : "完了にする", systemImage: completedToday ? "arrow.uturn.backward.circle" : "checkmark.circle")
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.large)
-                            .disabled(completedToday)
                         }
                         .padding(18)
                         .background(.background)
@@ -81,7 +88,7 @@ struct TodayView: View {
                         ContentUnavailableView(
                             "動画がありません",
                             systemImage: "play.slash",
-                            description: Text("設定で4つの動画を登録してください")
+                            description: Text("設定で動画を登録してください")
                         )
                     }
 
@@ -101,7 +108,7 @@ struct TodayView: View {
     }
 
     private func openVideo(_ video: WorkoutVideo) {
-        guard let url = URL(string: video.youtubeURL) else {
+        guard let url = WorkoutVideo.youtubeURL(from: video.youtubeURL) else {
             errorMessage = "YouTube URLが正しくありません"
             return
         }
@@ -121,6 +128,20 @@ struct TodayView: View {
             errorMessage = nil
         } catch {
             errorMessage = "完了記録の保存に失敗しました"
+        }
+    }
+
+    private func undoCompletion() {
+        let logsToDelete = todayLogs
+        guard !logsToDelete.isEmpty else { return }
+
+        logsToDelete.forEach { modelContext.delete($0) }
+
+        do {
+            try modelContext.save()
+            errorMessage = nil
+        } catch {
+            errorMessage = "完了記録の取り消しに失敗しました"
         }
     }
 }

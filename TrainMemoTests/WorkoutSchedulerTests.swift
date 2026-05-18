@@ -26,6 +26,16 @@ final class WorkoutSchedulerTests: XCTestCase {
         XCTAssertEqual(WorkoutVideo.defaults.map(\.order), [0, 1, 2, 3, 4])
     }
 
+    func testYouTubeURLValidationAllowsYouTubeHosts() {
+        XCTAssertNotNil(WorkoutVideo.youtubeURL(from: "https://www.youtube.com/watch?v=abc"))
+        XCTAssertNotNil(WorkoutVideo.youtubeURL(from: "https://youtu.be/abc"))
+    }
+
+    func testYouTubeURLValidationRejectsOtherHosts() {
+        XCTAssertNil(WorkoutVideo.youtubeURL(from: "https://example.com/watch?v=abc"))
+        XCTAssertNil(WorkoutVideo.youtubeURL(from: "not a url"))
+    }
+
     func testSkippedDaysStillAdvanceByDate() {
         let start = date(2026, 5, 1)
 
@@ -60,6 +70,18 @@ final class WorkoutSchedulerTests: XCTestCase {
         ]
 
         XCTAssertEqual(WorkoutScheduler.totalCompletedDays(logs: logs, calendar: calendar), 2)
+    }
+
+    func testLogsOnDateReturnsOnlyMatchingDay() {
+        let videoID = UUID()
+        let matchingLog = WorkoutLog(date: dateTime(2026, 5, 17, 21, 0), videoID: videoID)
+        let logs = [
+            WorkoutLog(date: date(2026, 5, 16), videoID: videoID),
+            matchingLog,
+            WorkoutLog(date: date(2026, 5, 18), videoID: videoID)
+        ]
+
+        XCTAssertEqual(WorkoutScheduler.logs(on: date(2026, 5, 17), logs: logs, calendar: calendar).map(\.id), [matchingLog.id])
     }
 
     func testMonthGridPadsToFullWeeks() {

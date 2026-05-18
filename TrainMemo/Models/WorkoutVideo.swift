@@ -29,12 +29,33 @@ final class WorkoutVideo: Identifiable {
 
     static var defaults: [WorkoutVideo] {
         (0..<defaultCount).map {
-            WorkoutVideo(
-                order: $0,
-                title: "動画 \($0 + 1)",
-                youtubeURL: placeholderURL,
-                durationMinutes: defaultDurationMinutes
-            )
+            defaultVideo(order: $0)
         }
+    }
+
+    static func defaultVideo(order: Int) -> WorkoutVideo {
+        WorkoutVideo(
+            order: order,
+            title: "動画 \(order + 1)",
+            youtubeURL: placeholderURL,
+            durationMinutes: defaultDurationMinutes
+        )
+    }
+
+    static func youtubeURL(from string: String) -> URL? {
+        guard
+            let url = URL(string: string.trimmingCharacters(in: .whitespacesAndNewlines)),
+            let scheme = url.scheme?.lowercased(),
+            scheme == "https" || scheme == "http",
+            let host = url.host?.lowercased()
+        else {
+            return nil
+        }
+
+        let isYouTubeHost = host == "youtube.com"
+            || host.hasSuffix(".youtube.com")
+            || host == "youtu.be"
+
+        return isYouTubeHost ? url : nil
     }
 }

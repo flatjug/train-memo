@@ -47,8 +47,16 @@ enum WorkoutScheduler {
         logs: [WorkoutLog],
         calendar: Calendar = .current
     ) -> Bool {
+        !Self.logs(on: date, logs: logs, calendar: calendar).isEmpty
+    }
+
+    static func logs(
+        on date: Date,
+        logs: [WorkoutLog],
+        calendar: Calendar = .current
+    ) -> [WorkoutLog] {
         let target = calendar.startOfDay(for: date)
-        return logs.contains { calendar.isDate($0.date, inSameDayAs: target) }
+        return logs.filter { calendar.isDate($0.date, inSameDayAs: target) }
     }
 
     static func completedDays(from logs: [WorkoutLog], calendar: Calendar = .current) -> Set<Date> {
