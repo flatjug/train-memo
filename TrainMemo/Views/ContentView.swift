@@ -3,23 +3,29 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @State private var selectedTab = AppTab.today
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             TodayView()
                 .tabItem {
                     Label("今日", systemImage: "sun.max.fill")
                 }
+                .tag(AppTab.today)
 
             HistoryView()
                 .tabItem {
                     Label("記録", systemImage: "calendar")
                 }
+                .tag(AppTab.history)
 
-            SettingsView()
+            SettingsView {
+                selectedTab = .today
+            }
                 .tabItem {
                     Label("設定", systemImage: "gearshape.fill")
                 }
+                .tag(AppTab.settings)
         }
         .tint(.mint)
         .task {
@@ -32,6 +38,12 @@ struct ContentView: View {
             }
         }
     }
+}
+
+private enum AppTab {
+    case today
+    case history
+    case settings
 }
 
 #Preview {

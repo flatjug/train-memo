@@ -9,6 +9,8 @@ struct SettingsView: View {
     @State private var videoPendingDeletion: WorkoutVideo?
     @State private var showingDeleteConfirmation = false
 
+    let goToToday: () -> Void
+
     private let durationRange = 1...180
 
     private var settings: AppSettings? {
@@ -30,6 +32,11 @@ struct SettingsView: View {
                 videosSection
             }
             .navigationTitle("設定")
+            .toolbar {
+                Button("今日へ") {
+                    goToToday()
+                }
+            }
             .onChange(of: videoSignature) {
                 saveAndScheduleNotifications()
             }
@@ -262,7 +269,7 @@ private struct VideoEditorRow: View {
             TextField("タイトル", text: $video.title)
                 .textInputAutocapitalization(.never)
 
-            TextField("YouTube URL", text: $video.youtubeURL)
+            TextField("YouTube URL", text: youtubeURLBinding)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
@@ -272,6 +279,20 @@ private struct VideoEditorRow: View {
             }
         }
         .padding(.vertical, 6)
+    }
+
+    private var youtubeURLBinding: Binding<String> {
+        Binding {
+            video.youtubeURL == WorkoutVideo.legacyPlaceholderURL ? "" : video.youtubeURL
+        } set: { newValue in
+            video.youtubeURL = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+    }
+}
+
+extension SettingsView {
+    init(goToToday: @escaping () -> Void = {}) {
+        self.goToToday = goToToday
     }
 }
 

@@ -24,6 +24,7 @@ final class WorkoutSchedulerTests: XCTestCase {
     func testDefaultVideosUseFiveDayCycle() {
         XCTAssertEqual(WorkoutVideo.defaults.count, 5)
         XCTAssertEqual(WorkoutVideo.defaults.map(\.order), [0, 1, 2, 3, 4])
+        XCTAssertTrue(WorkoutVideo.defaults.allSatisfy { $0.youtubeURL.isEmpty })
     }
 
     func testYouTubeURLValidationAllowsYouTubeHosts() {

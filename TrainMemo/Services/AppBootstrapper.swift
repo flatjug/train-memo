@@ -17,6 +17,8 @@ enum AppBootstrapper {
                 videos = try context.fetch(FetchDescriptor<WorkoutVideo>(sortBy: [SortDescriptor(\.order)]))
             }
 
+            clearLegacyPlaceholderURLs(in: videos)
+
             var settingsDescriptor = FetchDescriptor<AppSettings>()
             settingsDescriptor.fetchLimit = 1
             let settings = try context.fetch(settingsDescriptor).first ?? AppSettings()
@@ -33,6 +35,12 @@ enum AppBootstrapper {
         }
     }
 
+    private static func clearLegacyPlaceholderURLs(in videos: [WorkoutVideo]) {
+        for video in videos where video.youtubeURL == WorkoutVideo.legacyPlaceholderURL {
+            video.youtubeURL = WorkoutVideo.placeholderURL
+        }
+    }
+
     private static func shouldAddMissingDefaultVideo(to videos: [WorkoutVideo]) -> Bool {
         guard videos.count == WorkoutVideo.defaultCount - 1 else {
             return false
@@ -42,7 +50,7 @@ enum AppBootstrapper {
         return sortedVideos.enumerated().allSatisfy { index, video in
             video.order == index
                 && video.title == "動画 \(index + 1)"
-                && video.youtubeURL == WorkoutVideo.placeholderURL
+                && (video.youtubeURL == WorkoutVideo.placeholderURL || video.youtubeURL == WorkoutVideo.legacyPlaceholderURL)
                 && video.durationMinutes == WorkoutVideo.defaultDurationMinutes
         }
     }

@@ -5,7 +5,8 @@ import SwiftData
 final class WorkoutVideo: Identifiable {
     static let defaultCount = 5
     static let defaultDurationMinutes = 10
-    static let placeholderURL = "https://www.youtube.com/"
+    static let placeholderURL = ""
+    static let legacyPlaceholderURL = "https://www.youtube.com/"
 
     @Attribute(.unique) var id: UUID
     var order: Int
